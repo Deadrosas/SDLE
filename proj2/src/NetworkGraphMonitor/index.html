@@ -1,0 +1,203 @@
+<html>
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" type="text/css" />
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"> </script>
+
+<style type="text/css">
+
+        #mynetwork {
+            width: 98%;
+            margin-left:1%;
+            margin-bottom:1%;
+            height: 80%;
+            background-color: #bbbbbb;
+            border: 5px solid gray;
+            position: relative;
+            float: left;
+        }
+
+        body{
+          background-color: #192841;7
+        }
+        
+        
+        .labels{
+          text-align:center;
+          color:white;
+        }
+
+        h2{
+          text-align:center;
+          margin-top:1%;
+          color:white;
+        }
+        
+</style>
+
+</head>
+
+<body>
+
+<h2>Network Graph Monitor</h2>
+
+<div id = "mynetwork"></div>
+<div class="labels">
+<div>Nodes: <a id="node-count">0</a> </div>
+<div>Edges: <a id="edge-count">0</a></div>
+</div>
+  <script>
+    (function() {
+      window.onload = function() {
+        const socket = new WebSocket('ws://localhost:3000');
+
+        socket.addEventListener('open', function(event) {
+          console.log("Connected to server");
+        });
+
+        // Listen for messages
+        socket.addEventListener('message', function(event) {
+            processMessage(event.data);
+        });
+        
+      };
+    })();
+
+    function processMessage(message){
+      params = message.split(":");
+
+      command = params[0];
+
+      switch(command){
+          case "draw":
+            processDraw(JSON.parse(params[1]), JSON.parse(params[2]));
+            break;
+
+          case "clear":
+            clear();
+            break;
+
+          case "addNode":
+            processAddNode(JSON.parse(params[1]));
+            break;
+
+          case "addEdge":
+            processAddEdge(JSON.parse(params[1]));
+            break;
+      }
+
+    }
+
+    function processDraw(nodes, edges){
+      nodes_data = []
+      edges_data = []
+      for(let node of nodes){
+        nodes_data.push({
+          "id": node,
+          "label": node,
+          "shape": "dot",
+          "size": 10
+        });
+      }
+
+      for(let edge of edges){
+        edges_data.push({
+          "from": edge[0],
+          "to": edge[1],
+          "weight": 1
+        });
+      }
+
+      document.getElementById("node-count").innerHTML = nodes.length;
+      document.getElementById("edge-count").innerHTML = edges.length;
+
+      drawGraph(nodes_data, edges_data);
+      
+    }
+
+    function processAddNode(node){
+      network.body.data.nodes.add([{
+        "id": node,
+        "label": node,
+        "shape": "dot",
+        "size" : 10
+
+      }]);
+      document.getElementById("node-count").innerHTML = network.body.data.nodes.length;
+    }
+
+    function processAddEdge(edge){
+      network.body.data.edges.add([{
+        "from": edge[0],
+        "to": edge[1],
+        "weight": 1
+      }]);
+      document.getElementById("edge-count").innerHTML = network.body.data.edges.length;
+    }
+
+  </script>
+
+
+<script type="text/javascript">
+    // initialize global variables.
+    var edges;
+    var nodes;
+    var network; 
+    var container;
+    var data;
+    var container = document.getElementById('mynetwork');
+    var options = {
+      "configure": {
+          "enabled": false
+      },
+      "edges": {
+          "color": {
+              "inherit": true
+          },
+          "smooth": {
+              "enabled": false,
+              "type": "continuous"
+          }
+      },
+      "interaction": {
+          "dragNodes": true,
+          "hideEdgesOnDrag": false,
+          "hideNodesOnDrag": false
+      },
+      "physics": {
+          "enabled": true,
+          "stabilization": {
+              "enabled": true,
+              "fit": true,
+              "iterations": 1000,
+              "onlyDynamicEdges": false,
+              "updateInterval": 50
+          }
+      }
+  };
+
+    function clear(){
+        network = new vis.Network(container, {nodes: [], edges: []}, options);
+        document.getElementById("node-count").innerHTML = 0;
+        document.getElementById("edge-count").innerHTML = 0;
+    }
+
+    // This method is responsible for drawing the graph, returns the drawn network
+    function drawGraph(nodes_data, edges_data) {        
+        // parsing and collecting nodes and edges from the python
+        nodes = new vis.DataSet(nodes_data);
+        edges = new vis.DataSet(edges_data);
+
+        // adding nodes and edges to the graph
+        data = {nodes: nodes, edges: edges};
+
+      
+        network = new vis.Network(container, data, options);
+
+        return network;
+    }
+
+    clear();
+
+</script>
+</body>
+</html>
